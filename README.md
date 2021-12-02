@@ -1,4 +1,4 @@
 ### Advent Of COde 2021 ###
 
-By Steven Bartels
+By Jack Harb
 Done in C++
