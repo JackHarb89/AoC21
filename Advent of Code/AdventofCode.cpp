@@ -4,8 +4,62 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <math.h>
 
 using namespace std;
+
+struct Line {
+	int x1,x2,y1,y2;
+
+	Line ()
+	: x1(-1)
+	, x2(-1)
+	, y1(-1)
+	, y2(-1)
+	{}
+
+	int DistanceDiagonal45() {
+		return abs(x1 - x2);
+	}
+
+	bool IsValid() {
+		return x1 != -1 && x2 != -1 && y1 != -1 && y2 != -1;
+	}
+
+	bool IsHorizontal() {
+		return y1 == y2;
+	}
+
+	bool IsDiagonal45() {
+		return IsDiagonal() && abs(x1-x2) == abs(y1-y2);
+	}
+
+	bool IsVertical() {
+		return x1 == x2;
+	}
+
+	bool IsDiagonal() {
+		return !(IsHorizontal() || IsVertical());
+	}
+
+	void SetPoint(int in_x, int in_y, bool isStart) {
+		if (isStart) {
+			x1 = in_x;
+			y1 = in_y;
+		}
+		else {
+			x2 = in_x;
+			y2 = in_y;
+		}
+	}
+
+	Line operator=(const Line rhs) {
+		x1 = rhs.x1;
+		x2 = rhs.x2;
+		y1 = rhs.y1;
+		y2 = rhs.y2;
+	}
+};
 
 #pragma region AOC_01
 void AoCOne() {
@@ -207,7 +261,6 @@ void AoCThree() {
 
 #pragma endregion AOC_03
 
-
 #pragma region AOC_04
 
 void ParseDrawNumbers(ifstream& file, std::vector<int> &drawNumbers) {
@@ -358,11 +411,107 @@ void AoCFour() {
 
 #pragma endregion AOC_04
 
+#pragma region AOC_05
+
+void ParseLines(ifstream& file, array<array<int,1000>,1000> &pointCloud) {
+	string fileLine;
+	for (int i = 0; i < 1000; ++i) {
+		for (int j = 0; j < 1000; ++j) {
+			pointCloud[i][j] = 0;
+		}
+	}
+
+	auto parseStringLineToLine = [](string &fileLine) {
+		auto parseStringPoint = [](string pointLine, Line &line, bool isStart) {
+			std::string delimiterPoints = ",";
+			size_t posDelimPoint = pointLine.find(delimiterPoints);
+			int x,y;
+
+			x = std::stoi(pointLine.substr(0, posDelimPoint));
+			y = std::stoi(pointLine.substr(posDelimPoint + delimiterPoints.length(), std::string::npos));
+
+			line.SetPoint(x, y, isStart);
+		};
+
+		Line line;
+		std::string delimiterLine = " -> ";
+		size_t posDelimLine = posDelimLine = fileLine.find(delimiterLine);
+
+		parseStringPoint(fileLine.substr(0, posDelimLine), line, true);
+		parseStringPoint(fileLine.substr(posDelimLine + delimiterLine.length(), std::string::npos), line, false);
+
+		return line;
+	};
+
+	auto addLineToPointCloud = [](Line &line, array<array<int, 1000>, 1000>& pointCloud) {
+		if (!line.IsValid()) return;
+
+		if (line.IsDiagonal45()) {		
+			int iterations = line.DistanceDiagonal45();
+			for (int i = 0; i <= iterations; ++i) {
+				int xCoord = line.x1 + i * ((line.x2 - line.x1) / iterations);
+				int yCoord = line.y1 + i * ((line.y2 - line.y1) / iterations);
+				pointCloud[xCoord][yCoord] += 1;
+			}
+		}
+
+		else if (line.IsHorizontal()) {
+			int start = (line.x1 < line.x2 ? line.x1 : line.x2);
+			int end = (line.x2 > line.x1 ? line.x2 : line.x1);;
+
+			for (int i = start; i <= end; ++i) {
+				pointCloud[i][line.y1] += 1;
+			}
+		}
+
+		else if (line.IsVertical()) {
+			int start = (line.y1 < line.y2 ? line.y1 : line.y2);
+			int end = (line.y2 > line.y1 ? line.y2 : line.y1);;
+
+			for (int j = start; j <= end; ++j) {
+				pointCloud[line.x1][j] += 1;
+			}
+		}
+	};
+
+	while (std::getline(file, fileLine)) {
+		Line line = parseStringLineToLine(fileLine);
+		addLineToPointCloud(line, pointCloud);	
+	}
+}
+
+int MultiLineOverlaps(array<array<int, 1000>, 1000>& pointCloud) {
+	int overlaps = 0;
+	for (int i = 0; i < 1000; ++i) {
+		for (int j = 0; j < 1000; ++j) {
+			if(pointCloud[i][j] >= 2) overlaps++;
+		}
+	}
+	return overlaps;
+}
+
+void AoCFive() {
+	std::ifstream infile("InputFiles/inputAoC_05.txt");
+	array<array<int, 1000>, 1000>* pointCloud = new array<array<int, 1000>, 1000>;
+	int overlaps = 0;
+	if (infile.is_open()) {
+		ParseLines(infile, *pointCloud);
+		overlaps = MultiLineOverlaps(*pointCloud);
+		infile.close();
+	}
+	delete pointCloud;
+	cout << "AOC 05" << endl;
+	cout << "Overlaps: " << overlaps << endl;
+}
+
+#pragma endregion AOC_05
+
 int main() {
 	AoCOne();
 	AoCTwo();
 	AoCThree();
 	AoCFour();
+	AoCFive();
 	cin.get();
 	return 0;
 }
