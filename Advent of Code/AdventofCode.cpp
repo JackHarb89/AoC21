@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <array>
 
 using namespace std;
 
@@ -198,18 +199,170 @@ void AoCThree() {
 
 	cout << "AOC 03" << endl;
 	cout << "Gamma: " << gammaNumber << " Epsilon: " << epsilonNumber << endl;
-	cout << "O2: " << oxygenRatingNumber << " CO2: " << co2RatingNumber << endl;
 	cout << "Power Consumption: " << gammaNumber * epsilonNumber << endl;
-	cout << "LifeSupport Rating: " << oxygenRatingNumber * co2RatingNumber << endl;
+	cout << "O2: " << oxygenRatingNumber << " CO2: " << co2RatingNumber << endl;
+	cout << "LifeSupport Rating: " << oxygenRatingNumber * co2RatingNumber << endl << endl;
 
 }
 
 #pragma endregion AOC_03
 
+
+#pragma region AOC_04
+
+void ParseDrawNumbers(ifstream& file, std::vector<int> &drawNumbers) {
+	string line;
+	int index = 0;
+	while (std::getline(file, line, ',')) {
+		drawNumbers.push_back(std::stoi(line));
+		++index;
+		if (index == 99) {
+			std::getline(file, line);
+			drawNumbers.push_back(std::stoi(line));
+			return;
+		}
+	}
+}
+
+void SplitBoardRow(string& line, const string& delimiter, int(&boardRow)[5]) {
+	size_t pos = 0;
+	std::string rowNumber;
+	int columnIndex = 0;
+	while (columnIndex < 5 && (pos = line.find(delimiter)) != std::string::npos) {
+		if (line.substr(0, pos) == "") {
+			line.erase(0, pos + delimiter.length());
+			continue;
+		}
+		boardRow[columnIndex] = std::stoi(line.substr(0, pos));
+		line.erase(0, pos + delimiter.length());
+		++columnIndex;
+	}
+	boardRow[4] = std::stoi(line);
+}
+
+void ParseBingoBoards(ifstream& file, vector < array<array<int, 5>, 5>> &boards) {
+	string line;
+	int indexRow = 0;
+	array<array<int, 5>, 5> board;
+
+	while (std::getline(file, line)) {
+		if (line == "") {
+			continue;
+		}
+		else {
+			int boardRow[5];
+			SplitBoardRow(line, " ", boardRow);
+			board[indexRow][0] = boardRow[0];
+			board[indexRow][1] = boardRow[1];
+			board[indexRow][2] = boardRow[2];
+			board[indexRow][3] = boardRow[3];
+			board[indexRow][4] = boardRow[4];
+			++indexRow;
+
+			if (indexRow == 5) {
+				indexRow = 0;
+				boards.push_back(board);
+			}
+		}
+	}
+}
+
+bool HasBingo(std::vector<int> drawNumbers, int(&line)[5]) {
+	int matchCount = 0;
+	for (int i = 0; i < 5 ; ++i) {
+		for (int value : drawNumbers) {
+			if (line[i] == value) {
+				++matchCount;
+				break;
+			}
+		}
+	}
+	return matchCount == 5;
+}
+
+bool ArrayContainsNumber(std::vector<int> arr, int number) {
+	for (auto &value : arr) {
+		if (value == number) {
+			return true;
+		}
+	}
+	return false;
+}
+
+int CalculateScore(array<array<int, 5>, 5> &board, std::vector<int> currentDrawNumbers, int lastNumberDrawn) {
+	int SumUnmarked = 0;
+
+	for (auto &row : board) {
+		for (int value : row) {
+			if (!ArrayContainsNumber(currentDrawNumbers, value)) {
+				SumUnmarked += value;
+			}
+		}
+	}
+
+	return SumUnmarked * lastNumberDrawn;
+}
+
+int FindBingo(std::vector<int> drawNumbers, vector<array<array<int, 5>, 5>> &boards, bool findLastBingo = false) {
+	int currentBingoScore = 0;
+	std::vector<int> currentDrawNumbers;
+	for (int i = 0; i < 100; ++i) {							// Increase DrawNumber
+		currentDrawNumbers.push_back(drawNumbers[i]);
+		auto j = std::begin(boards);
+		while (j != std::end(boards)) {
+			bool BingoFound = false;
+			auto board = *j;
+			for (int k = 0; k < 5; k++) {
+				int column[5] = { board[k][0], board[k][1], board[k][2], board[k][3], board[k][4] };
+				int row[5] = { board[0][k], board[1][k], board[2][k], board[3][k], board[4][k] };
+				if (HasBingo(currentDrawNumbers, column) || HasBingo(currentDrawNumbers, row)) {
+					currentBingoScore = CalculateScore(board, currentDrawNumbers, drawNumbers[i]);
+
+					if (!findLastBingo) {
+						return currentBingoScore;
+					}
+
+					j = boards.erase(j);
+					BingoFound = true;
+					break;
+				}
+			}
+
+			if (BingoFound) {
+				continue;
+			}
+			++j;
+		}
+	}
+	return currentBingoScore;
+}
+
+
+void AoCFour() {
+	vector<int> drawNumbers; 
+	vector<array<array<int,5>,5>> boards;
+	int bingoScore = 0;
+
+
+	std::ifstream infile("InputFiles/inputAoC_04.txt");
+	if (infile.is_open()) {
+		ParseDrawNumbers(infile, drawNumbers);
+		ParseBingoBoards(infile, boards);
+		bingoScore = FindBingo(drawNumbers, boards, false);
+		infile.close();
+	}
+
+	cout << "AOC 04" << endl;
+	cout << "Bingo Score: " << bingoScore << endl << endl;
+}
+
+#pragma endregion AOC_04
+
 int main() {
 	AoCOne();
 	AoCTwo();
 	AoCThree();
+	AoCFour();
 	cin.get();
 	return 0;
 }
